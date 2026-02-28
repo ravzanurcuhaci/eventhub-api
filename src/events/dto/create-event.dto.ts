@@ -16,6 +16,10 @@ export class CreateEventDto {
     date: string;
 
 
+    @IsString()
+    @IsOptional()
+    location?: string;
+
     @IsOptional()
     @ValidateNested({ each: true })
     @Type(() => CreateTicketTypeDto)

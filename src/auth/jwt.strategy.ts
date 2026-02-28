@@ -15,13 +15,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         config: ConfigService,
         private readonly prisma: PrismaService,
     ) {
+        //headerden bearer token al secret ile doğrula doğruysa payloadı validate e gönder
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             secretOrKey: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
             ignoreExpiration: false,
         });
     }
-
+    //payload sub ile dbden kullanıcıyı buluyor user varsa dönüyor yoksa exceptşon fırlatıyor
+    //token olup kullanıcı silinirse dbden de kontrol sağlandığı için daha sağlamdır
     async validate(payload: JwtPayload) {
         const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },

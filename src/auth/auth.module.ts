@@ -14,6 +14,7 @@ import type { SignOptions } from 'jsonwebtoken';
     PrismaModule,
     PassportModule,
     ConfigModule,
+    //oluşan jwt configine geliyor useFactory kısmında 
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

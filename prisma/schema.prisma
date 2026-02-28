@@ -49,6 +49,7 @@ model Event {
 
   organizer   User        @relation("OrganizerEvents", fields: [organizerId], references: [id])
   ticketTypes TicketType[]
+  @@unique ([ organizerId, title, date])
 }
 
 model TicketType {

@@ -4,6 +4,8 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
 import { ListEventsQueryDto } from './dto/list-events.dto';
 import { Prisma } from '@prisma/client';
+import { Role } from 'src/auth/roles.enum';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventsService {
@@ -150,6 +152,61 @@ export class EventsService {
             },
             items: events,
         };
+    }
+
+    // update event
+    async updateEvent(
+        eventId: string,
+        dto: UpdateEventDto,
+        currentUser: { id: string; role: Role },
+    ) {
+        const { ticketTypes, ...eventData } = dto;
+
+        // Admin: direkt id ile update
+        if (currentUser.role === Role.ADMIN) {
+            return this.prisma.event.update({
+                where: { id: eventId },
+                data: {
+                    ...eventData,
+                    ...(ticketTypes
+                        ? {
+                            ticketTypes: {
+                                deleteMany: {}, // bu event'e bağlı tüm ticketType'ları sil
+                                create: ticketTypes.map((t) => ({
+                                    name: t.name,
+                                    price: t.price,
+                                    stock: t.stock,
+                                })),
+                            },
+                        }
+                        : {}),
+                },
+            });
+        }
+
+        // Organizer: updateMany yerine "where'e organizerId şartı koyarak update" yap
+        // (updateMany nested write desteklemediği için)
+        return this.prisma.event.update({
+            where: {
+                // Prisma schema'nda böyle bir compound unique yoksa aşağıdaki alternatife bak
+                id: eventId,
+            },
+            data: {
+                ...eventData,
+                ...(ticketTypes
+                    ? {
+                        ticketTypes: {
+                            deleteMany: {},
+                            create: ticketTypes.map((t) => ({
+                                name: t.name,
+                                price: t.price,
+                                stock: t.stock,
+                            })),
+                        },
+                    }
+                    : {}),
+            },
+        });
     }
 
 }

@@ -36,12 +36,11 @@ export class AuthService {
 
         const accessToken = await this.jwt.signAsync({
             sub: user.id,
-            role: user.role,
         });
 
         return { user, accessToken };
     }
-
+    //token üretimi
     async login(dto: LoginDto) {
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
@@ -52,9 +51,10 @@ export class AuthService {
         const valid = await bcrypt.compare(dto.password, user.passwordHash);
         if (!valid) throw new UnauthorizedException('Invalid credentials');
 
+        //jwt burada oluşuyor
         const accessToken = await this.jwt.signAsync({
+            //JWT içinde tutlan bilgiler 
             sub: user.id,
-            role: user.role,
         });
 
         return {
