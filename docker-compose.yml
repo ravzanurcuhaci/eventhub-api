@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Veritabanı bağlantısı db servisinin '5432' portuna (iç ağ üzerinden) gider.
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/eventhub?schema=public
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: eventhub
+    # Host makinede (sizin bilgisayarınızda) halihazırda 5432 portunda bir veritabanı çalıştığı için
+    # Dışarıya 5433 portunu açıyoruz. (Bağlantı formatı: DIŞ_PORT:İÇ_PORT)
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d eventhub"]
+      interval: 10s # Veritabanının hazır olmasını düzenli olarak kontrol et
+      timeout: 5s
+      retries: 5
+# Unutkan olan konteyner sistemine, verilerinizi harici bir diske yazar gibi güvende tutmasını sağlayan kablodur.
+volumes:
+  postgres_data:
