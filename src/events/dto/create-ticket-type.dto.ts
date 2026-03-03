@@ -1,6 +1,9 @@
-import { IsInt, IsNotEmpty, IsPositive, IsString, Min } from "class-validator";
+import { IsInt, IsNotEmpty, IsPositive, IsString, Min, IsOptional } from "class-validator";
 
 export class CreateTicketTypeDto {
+    @IsString()
+    @IsOptional()
+    id?: string;
 
     @IsString()
     @IsNotEmpty()

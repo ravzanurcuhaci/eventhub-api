@@ -10,7 +10,7 @@ export class RegisterDto {
     password: string;
 
     @IsOptional()
-    @IsIn(['USER', 'ORGANIZER'])
-    role?: 'USER' | 'ORGANIZER';
+    @IsIn(['USER', 'ORGANIZER', 'ADMIN'])
+    role?: 'USER' | 'ORGANIZER' | 'ADMIN';
 
 }

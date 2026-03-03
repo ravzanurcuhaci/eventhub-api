@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -10,10 +11,12 @@ export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly jwt: JwtService,
+        private readonly configService: ConfigService,
     ) { }
 
     private async hashPassword(password: string) {
-        return bcrypt.hash(password, 12);
+        const saltRounds = this.configService.get<number>('BCRYPT_SALT_ROUNDS') || 10;
+        return bcrypt.hash(password, Number(saltRounds));
     }
 
     async register(dto: RegisterDto) {

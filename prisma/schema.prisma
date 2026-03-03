@@ -48,6 +48,7 @@ model Event {
   updatedAt   DateTime    @updatedAt
 
   organizer   User        @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  isActive    Boolean  @default(true)
   ticketTypes TicketType[]
   @@unique ([ organizerId, title, date])
 }
@@ -58,7 +59,7 @@ model TicketType {
   name    String
   price   Int
   stock   Int
-
+  isActive  Boolean  @default(true)
   event   Event  @relation(fields: [eventId], references: [id])
   items   OrderItem[]
   @@unique([eventId, name]) 

@@ -15,7 +15,10 @@ async function bootstrap() {
       forbidNonWhitelisted: true,//dtoda olmayan alanlarda 400 hata fırlatır
       transform: true,//DTO decorator’larının nested çalışması ve tip dönüşümleri için iyi.
       exceptionFactory: (errors) => {
-        return new BadRequestException(formatValidationErrors(errors));
+        return new BadRequestException({
+          message: 'Validation failed',
+          errors,
+        });
       },
     }),
   );

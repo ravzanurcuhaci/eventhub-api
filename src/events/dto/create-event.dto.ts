@@ -3,6 +3,9 @@ import { CreateTicketTypeDto } from './create-ticket-type.dto';
 import { Type } from 'class-transformer';
 
 export class CreateEventDto {
+    @IsString()
+    @IsOptional()
+    id?: string;
 
     @IsString()
     @IsNotEmpty()

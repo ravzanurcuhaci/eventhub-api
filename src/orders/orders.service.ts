@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from '@prisma/client';
@@ -112,7 +112,6 @@ export class OrdersService {
 
             if (order.status !== OrderStatus.PENDING) {
                 throw new BadRequestException('Only PENDING orders can be canceled');
-
             }
 
             // stock geri ekle
@@ -170,5 +169,45 @@ export class OrdersService {
             });
         });
     }
+    findByUserId(userId: string) {
+        return this.prisma.order.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                items: true,
+            },
+        });
+    }
+
+    async getOrderByIdForUser(orderId: string, user: { id?: string; sub?: string; role?: string }) {
+        const userId = user.id ?? user.sub;
+        const role = user.role;
+
+        const order = await this.prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                items: {
+                    include: {
+                        ticketType: true, // istersen çıkar
+                    },
+                },
+            },
+        });
+
+        if (!order) throw new NotFoundException('Order not found');
+
+        // ADMIN her şeyi görür
+        if (role === 'ADMIN') return order;
+
+        // Owner kontrolü
+        if (order.userId !== userId) {
+            // Güvenlik isterse 404 da dönebilirsin (sızıntı azaltır)
+            throw new ForbiddenException('Not allowed to access this order');
+        }
+
+        return order;
+    }
+
+
 
 }

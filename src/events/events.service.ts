@@ -21,7 +21,7 @@ export class EventsService {
             throw new BadRequestException('Organizer not found');
         }
 
-        if (organizer.role !== 'ORGANIZER') {
+        if (organizer.role !== Role.ORGANIZER) {
             // Normalde buraya düşmez; düşerse sistemde bir açık/bug var demektir.
             throw new BadRequestException('User is not an organizer');
         }
@@ -91,19 +91,13 @@ export class EventsService {
                 description: true,
                 date: true,
                 location: true,
-                organizer: { select: { id: true, email: true, role: true }, },
+                organizer: { select: { id: true, email: true, role: true } },
                 ticketTypes: {
-                    where: { stock: { gt: 0 } }, // Sadece stokta olan bilet türlerini göster
-                    select: {
-                        id: true,
-                        name: true,
-                        price: true,
-                        stock: true,
-                    }
-                }
+                    where: { isActive: true, stock: { gt: 0 } },
+                    select: { id: true, name: true, price: true, stock: true },
+                },
             },
         });
-
 
         if (!event) throw new NotFoundException('Event not found');
 
@@ -126,22 +120,16 @@ export class EventsService {
         const [total, events] = await this.prisma.$transaction([
             this.prisma.event.count(),
             this.prisma.event.findMany({
-                skip,
-                take,
+                where: { isActive: true },
                 orderBy: { date: 'asc' },
                 include: {
-                    organizer: { select: { id: true, email: true, role: true }, },
+                    organizer: { select: { id: true, email: true, role: true } },
                     ticketTypes: {
-                        select: {
-                            id: true,
-                            name: true,
-                            price: true,
-                            stock: true,
-                        }
-                    }
+                        where: { isActive: true }, // istersen stock gt 0 da ekle
+                        select: { id: true, name: true, price: true, stock: true },
+                    },
                 },
-
-            }),
+            })
         ]);
         return {
             meta: {
@@ -154,58 +142,107 @@ export class EventsService {
         };
     }
 
-    // update event
-    async updateEvent(
-        eventId: string,
-        dto: UpdateEventDto,
-        currentUser: { id: string; role: Role },
-    ) {
+
+    //mine list
+    findMine(userId: string) {
+        return this.prisma.event.findMany({
+            where: { organizerId: userId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                ticketTypes: true,
+            },
+        });
+    }
+
+    async updateEvent(eventId: string, dto: UpdateEventDto, currentUser: { id: string; role: Role }) {
         const { ticketTypes, ...eventData } = dto;
 
-        // Admin: direkt id ile update
-        if (currentUser.role === Role.ADMIN) {
-            return this.prisma.event.update({
+        return this.prisma.$transaction(async (tx) => {
+            // Event alanları
+            await tx.event.update({
                 where: { id: eventId },
-                data: {
-                    ...eventData,
-                    ...(ticketTypes
-                        ? {
-                            ticketTypes: {
-                                deleteMany: {}, // bu event'e bağlı tüm ticketType'ları sil
-                                create: ticketTypes.map((t) => ({
-                                    name: t.name,
-                                    price: t.price,
-                                    stock: t.stock,
-                                })),
-                            },
-                        }
-                        : {}),
-                },
+                data: { ...eventData },
             });
+
+            if (!ticketTypes) {
+                return tx.event.findUnique({ where: { id: eventId }, include: { ticketTypes: true } });
+            }
+
+            const existing = await tx.ticketType.findMany({
+                where: { eventId },
+                select: { id: true },
+            });
+            const existingIds = new Set(existing.map(x => x.id));
+            const incomingIds = new Set(ticketTypes.filter(t => t.id).map(t => t.id!));
+
+            // update
+            for (const t of ticketTypes) {
+                if (t.id) {
+                    await tx.ticketType.update({
+                        where: { id: t.id },
+                        data: { name: t.name, price: t.price, stock: t.stock, isActive: true },
+                    });
+                }
+            }
+
+            // create
+            const toCreate = ticketTypes.filter(t => !t.id);
+            if (toCreate.length) {
+                await tx.ticketType.createMany({
+                    data: toCreate.map(t => ({
+                        eventId,
+                        name: t.name,
+                        price: t.price,
+                        stock: t.stock,
+                        isActive: true,
+                    })),
+                });
+            }
+
+            // DTO’da olmayanları pasif et
+            const toDisable = [...existingIds].filter(id => !incomingIds.has(id));
+            if (toDisable.length) {
+                await tx.ticketType.updateMany({
+                    where: { id: { in: toDisable } },
+                    data: { isActive: false },
+                });
+            }
+
+            return tx.event.findUnique({
+                where: { id: eventId },
+                include: { ticketTypes: true },
+            });
+        });
+    }
+
+    async deleteEvent(eventId: string, currentUser: { id: string; role: Role }) {
+        // 1) Olayın veritabanında var olup olmadığını kontrol et.
+        const event = await this.prisma.event.findUnique({
+            where: { id: eventId },
+            select: { id: true, organizerId: true },
+        });
+
+        if (!event) throw new NotFoundException('Event not found');
+
+        // 2) Yetki kontrolü yap.
+        // Eğer kullanıcı ADMIN değilse, ve ORGANIZER ise ama olayın sahibi değilse hata fırlat.
+        if (currentUser.role !== Role.ADMIN) {
+            if (currentUser.role !== Role.ORGANIZER || event.organizerId !== currentUser.id) {
+                throw new ForbiddenException('You can only delete your own event');
+            }
         }
 
-        // Organizer: updateMany yerine "where'e organizerId şartı koyarak update" yap
-        // (updateMany nested write desteklemediği için)
-        return this.prisma.event.update({
-            where: {
-                // Prisma schema'nda böyle bir compound unique yoksa aşağıdaki alternatife bak
-                id: eventId,
-            },
-            data: {
-                ...eventData,
-                ...(ticketTypes
-                    ? {
-                        ticketTypes: {
-                            deleteMany: {},
-                            create: ticketTypes.map((t) => ({
-                                name: t.name,
-                                price: t.price,
-                                stock: t.stock,
-                            })),
-                        },
-                    }
-                    : {}),
-            },
+        // 3) Yetki başarılı, silme (soft delete) işlemini transaction içerisinde yap.
+        await this.prisma.$transaction(async (tx) => {
+            await tx.ticketType.updateMany({
+                where: { eventId },
+                data: { isActive: false },
+            });
+
+            await tx.event.update({
+                where: { id: eventId },
+                data: { isActive: false },
+            });
         });
     }
 

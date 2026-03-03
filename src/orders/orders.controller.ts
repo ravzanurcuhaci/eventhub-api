@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { User } from 'src/auth/decorators/user.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { OrdersService } from './orders.service';
@@ -16,7 +16,6 @@ export class OrdersController {
 
     }
 
-
     @Patch(':id/cancel')
     @UseGuards(JwtAuthGuard)
     async cancel(@Param('id') orderId: string) {
@@ -28,5 +27,20 @@ export class OrdersController {
     @UseGuards(JwtAuthGuard)
     async pay(@Param('id') orderId: string) {
         return this.ordersService.payOrder(orderId);
+    }
+
+
+    @Get('me')
+    @UseGuards(JwtAuthGuard)
+    getMyOrders(@Req() req: Request) {
+        const userId = (req as any).user.id;
+        return this.ordersService.findByUserId(userId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get(':id')
+    getById(@Param('id') id: string, @Req() req: Request) {
+        const user = (req as any).user; // { id/sub, role }
+        return this.ordersService.getOrderByIdForUser(id, user);
     }
 }

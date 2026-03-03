@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Put, Req, UseGuards, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -39,7 +39,14 @@ export class EventsController {
         return this.events.createTicketType(eventId, dto, user.id);
     }
 
-
+    //event organizator mine listeleme 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ORGANIZER)
+    @Get('mine')
+    mine(@Req() req: Request) {
+        const userId = (req as any).user.id;
+        return this.events.findMine(userId);
+    }
     @Get(':eventId')
     async getById(@Param() params: EventIdParamDto) {
         return this.events.getEventById(params.eventId);
@@ -50,6 +57,8 @@ export class EventsController {
     async list(@Query() query: ListEventsQueryDto) {
         return this.events.listEvents(query);
     }
+
+
 
 
     //update event
@@ -64,6 +73,15 @@ export class EventsController {
         return this.events.updateEvent(eventId, dto, user);
     }
 
+
+    //delete event
+    @Delete(':eventId')
+    @UseGuards(JwtAuthGuard, RolesGuard, EventOwnerGuard)
+    @Roles(Role.ORGANIZER, Role.ADMIN)
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async deleteEvent(@Param('eventId') eventId: string, @User() user: RequestUser): Promise<void> {
+        await this.events.deleteEvent(eventId, user);
+    }
 
 
 
