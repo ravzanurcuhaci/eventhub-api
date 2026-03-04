@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwt: JwtService,
         private readonly configService: ConfigService,
+        private readonly mailerService: MailService,
     ) { }
 
     private async hashPassword(password: string) {
@@ -39,6 +41,11 @@ export class AuthService {
 
         const accessToken = await this.jwt.signAsync({
             sub: user.id,
+        });
+
+        // Send welcome email asynchronously without blocking the response
+        this.mailerService.sendWelcomeEmail(user.email).catch((error) => {
+            console.error('Failed to send welcome email in background', error);
         });
 
         return { user, accessToken };

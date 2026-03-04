@@ -2,12 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { formatValidationErrors } from './common/errors/validation-error.formatter';
-import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 //entry point
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, { abortOnError: false });
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

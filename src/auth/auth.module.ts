@@ -8,6 +8,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import type { JwtModuleOptions } from '@nestjs/jwt';
 import type { SignOptions } from 'jsonwebtoken';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import type { SignOptions } from 'jsonwebtoken';
         };
       },
     }),
+    MailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

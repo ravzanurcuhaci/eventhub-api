@@ -32,6 +32,8 @@ export class EventsService {
                 description: dto.description,
                 date: new Date(dto.date),
                 organizerId,
+                category: dto.category,
+                location: dto.location,
                 ticketTypes: {
                     create: dto.ticketTypes || [],
                 },
@@ -91,6 +93,7 @@ export class EventsService {
                 description: true,
                 date: true,
                 location: true,
+                category: true,
                 organizer: { select: { id: true, email: true, role: true } },
                 ticketTypes: {
                     where: { isActive: true, stock: { gt: 0 } },
@@ -109,23 +112,52 @@ export class EventsService {
     }
 
 
-    //event listeleme
     async listEvents(query: ListEventsQueryDto) {
         const page = query.page ?? 1;
         const limit = query.limit ?? 10;
 
+        //skip → kaç kayıt atlanacak
+        //take → kaç kayıt getirilecek
         const skip = (page - 1) * limit;
         const take = limit;
 
+        //sadece aktif eventleri getir
+        const where: Prisma.EventWhereInput = { isActive: true };
+
+        // category validation and filtering
+        if (query.category) {
+            where.category = query.category;
+        }
+
+        const orderBy: Prisma.EventOrderByWithRelationInput = {};
+        const sortBy = query.sortBy ?? 'date';
+        const sortOrder = query.sortOrder ?? 'asc';
+
+        // Sorting logic
+        if (sortBy === 'title') {
+            orderBy.title = sortOrder;
+        } else if (sortBy === 'createdAt') {
+            orderBy.createdAt = sortOrder;
+        } else {
+            orderBy.date = sortOrder;
+        }
+
+        //Transaction Kullanımı
+        //Toplam kayıt sayısını alıyorsun, Sayfalı veriyi alıyorsun
+
         const [total, events] = await this.prisma.$transaction([
-            this.prisma.event.count(),
+            //toplam kaç event var
+            this.prisma.event.count({ where }),
+            //sayfalı event verisi
             this.prisma.event.findMany({
-                where: { isActive: true },
-                orderBy: { date: 'asc' },
+                where,
+                skip,
+                take,
+                orderBy,
                 include: {
                     organizer: { select: { id: true, email: true, role: true } },
                     ticketTypes: {
-                        where: { isActive: true }, // istersen stock gt 0 da ekle
+                        where: { isActive: true },
                         select: { id: true, name: true, price: true, stock: true },
                     },
                 },

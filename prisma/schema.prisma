@@ -27,6 +27,8 @@ model Event {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   location    String?
+  category    EventCategory?
+  status      EventStatus  @default(UPCOMING)
   isActive    Boolean      @default(true)
   organizer   User         @relation("OrganizerEvents", fields: [organizerId], references: [id])
   ticketTypes TicketType[]
@@ -80,5 +82,20 @@ enum Role {
 enum OrderStatus {
   PENDING
   PAID
+  CANCELED
+}
+
+
+enum EventCategory {
+  MUSIC
+  SPORT
+  THEATRE
+  CONFERENCE
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
   CANCELED
 }

@@ -1,6 +1,7 @@
-import { IsDateString, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { CreateTicketTypeDto } from './create-ticket-type.dto';
 import { Type } from 'class-transformer';
+import { EventCategory } from '@prisma/client';
 
 export class CreateEventDto {
     @IsString()
@@ -18,6 +19,10 @@ export class CreateEventDto {
     @IsDateString()
     date: string;
 
+    @IsOptional()
+    @IsEnum(EventCategory)
+    category?: EventCategory;
+
 
     @IsString()
     @IsOptional()
@@ -28,3 +33,5 @@ export class CreateEventDto {
     @Type(() => CreateTicketTypeDto)
     ticketTypes?: CreateTicketTypeDto[];
 }
+
+

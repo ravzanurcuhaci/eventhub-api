@@ -1,105 +1,88 @@
 import {
-    ArgumentsHost,
-    Catch,
     ExceptionFilter,
+    Catch,
+    ArgumentsHost,
     HttpException,
     HttpStatus,
     Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 
 @Catch()
-export class GlobalExceptionFilter implements ExceptionFilter {
-    private readonly logger = new Logger(GlobalExceptionFilter.name);
+export class AllExceptionsFilter implements ExceptionFilter {
+    private readonly logger = new Logger(AllExceptionsFilter.name);
 
     catch(exception: unknown, host: ArgumentsHost) {
-        const ctx = host.switchToHttp();
-        const res = ctx.getResponse<Response>();
-        const req = ctx.getRequest<Request>();
 
-        // Default values
+        //context i http ye çevirme 
+        //ArgumentsHost generic bir yapıdır Biz HTTP uygulaması olduğumuz için:ArgumentsHost → HTTP context'e dönüştürdük
+        const ctx = host.switchToHttp();
+        const response = ctx.getResponse<Response>();
+        const request = ctx.getRequest<Request>();
+
+        //varsayılan değerler
         let status = HttpStatus.INTERNAL_SERVER_ERROR;
-        let responseBody: any = {
+        let message: any = 'Internal server error';
+        let code = 'INTERNAL_SERVER_ERROR';
+
+        //Hata Türlerine Göre Ayrım
+
+        if (exception instanceof HttpException) {
+            //nestn verdiği http statusu alıyoruz
+            status = exception.getStatus();
+            const exceptionResponse = exception.getResponse();
+            message = typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as any).message || exceptionResponse;
+            code = 'HTTP_EXCEPTION';
+        } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+            code = exception.code;
+            switch (exception.code) {
+                case 'P2002':
+                    status = HttpStatus.CONFLICT;
+                    message = 'Unique constraint failed, record already exists.';
+                    break;
+                case 'P2025':
+                    status = HttpStatus.NOT_FOUND;
+                    message = 'Record not found.';
+                    break;
+                case 'P2003':
+                    status = HttpStatus.BAD_REQUEST;
+                    message = 'Foreign key constraint failed.';
+                    break;
+                default:
+                    status = HttpStatus.BAD_REQUEST;
+                    message = 'Database request error.';
+                    break;
+            }
+        } else if (exception instanceof Prisma.PrismaClientValidationError) {
+            status = HttpStatus.BAD_REQUEST;
+            code = 'PRISMA_VALIDATION_ERROR';
+            message = 'Database validation error.';
+        } else if (exception instanceof Error) {
+            message = exception.message;
+        }
+
+        const errorResponse = {
             success: false,
+            statusCode: status,
             error: {
-                code: 'INTERNAL_SERVER_ERROR',
-                message: 'Unexpected error occurred',
-                details: null,
+                code,
+                message,
             },
+            timestamp: new Date().toISOString(),
+            path: request.url,
         };
 
-        // HttpException (Nest'in fırlattıkları)
-        if (exception instanceof HttpException) {
-            status = exception.getStatus();
-            const exResponse = exception.getResponse();
-
-            // Eğer bizim custom body'miz varsa (validation'da yaptığımız gibi) onu aynen geç
-            if (typeof exResponse === 'object' && exResponse !== null) {
-                // BadRequestException(formatValidationErrors...) burada zaten success:false...
-                // Ama yine de güvenli olsun diye kontrol ediyoruz
-                if ((exResponse as any).success === false) {
-                    responseBody = exResponse;
-                } else {
-                    responseBody = {
-                        success: false,
-                        error: {
-                            code: HttpStatus[status] ?? 'HTTP_ERROR',
-                            message: (exResponse as any).message ?? exception.message,
-                            details: (exResponse as any),
-                        },
-                    };
-                }
-            } else {
-                responseBody = {
-                    success: false,
-                    error: {
-                        code: HttpStatus[status] ?? 'HTTP_ERROR',
-                        message: String(exResponse),
-                        details: null,
-                    },
-                };
-            }
+        if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+            this.logger.error(
+                `${request.method} ${request.url} -> Status: ${status} Error: ${exception instanceof Error ? exception.stack : exception}`,
+            );
+        } else {
+            this.logger.warn(
+                `${request.method} ${request.url} -> Status: ${status} Message: ${JSON.stringify(message)}`,
+            );
         }
 
-        // Prisma errors (basit mapping)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyEx = exception as any;
-
-        if (anyEx?.code === 'P2002') {
-            status = HttpStatus.CONFLICT;
-            responseBody = {
-                success: false,
-                error: {
-                    code: 'UNIQUE_CONSTRAINT',
-                    message: 'This value already exists (unique constraint).',
-                    details: anyEx?.meta ?? null,
-                },
-            };
-        }
-
-        if (anyEx?.code === 'P2025') {
-            status = HttpStatus.NOT_FOUND;
-            responseBody = {
-                success: false,
-                error: {
-                    code: 'NOT_FOUND',
-                    message: 'Record not found.',
-                    details: anyEx?.meta ?? null,
-                },
-            };
-        }
-
-        // Basit log: production değil, öğrenme seviyesinde "yeterli" log
-        this.logger.error(
-            `${req.method} ${req.originalUrl} -> ${status}`,
-            exception instanceof Error ? exception.stack : undefined,
-        );
-
-        res.status(status).json({
-            ...responseBody,
-            // debug için (istersen kaldırabilirsin)
-            path: req.originalUrl,
-            timestamp: new Date().toISOString(),
-        });
+        response.status(status).json(errorResponse);
     }
 }
