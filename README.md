@@ -1,98 +1,102 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# EventHub API (Backend Projesi)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Proje Özeti
+Bu proje, güvenli, ölçeklenebilir ve performanslı bir backend altyapısı sunmak amacıyla geliştirilmiş Node.js, **NestJS** ve **PostgreSQL** tabanlı bir RESTful API sistemidir. Proje, veri erişim katmanı olarak **Prisma ORM**'i kullanmaktadır. Kullanıcı yönetimi, rol tabanlı yetkilendirme ve karmaşık veri modellemeleri gibi temel iş gereksinimlerini sağlam ve esnek bir mimariyle karşılamak üzere tasarlanmıştır.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Özellikler
+- **Kimlik Doğrulama:** Passport ve JWT (JSON Web Token) tabanlı güvenli giriş/kayıt sistemi.
+- **Yetkilendirme:** Kullanıcı rollerine göre erişim kontrolü (Role-Based Access Control).
+- **CRUD Operasyonları:** Temel veri varlıkları üzerinde standart oluşturma, okuma, güncelleme ve silme işlemleri.
+- **İlişkisel Veritabanı:** PostgreSQL ve Prisma ORM ile yapılandırılmış sağlam veritabanı modeli ve tip güvenliği.
+- **Güvenlik & Stabilite:** Throttler (Rate-limiting), bcrypt (Şifre şifreleme) ve çeşitli güvenlik optimizasyonları.
+- **Arka Plan Görevleri:** NestJS Schedule (Cron jobs) ile zamanlanmış görevlerin yönetimi.
+- **E-posta Entegrasyonu:** Nodemailer / Mailer modülü ile otomatik e-posta gönderimi.
 
-## Description
+## Teknolojiler
+- **Çalışma Ortamı:** Node.js
+- **Framework:** NestJS
+- **Veritabanı:** PostgreSQL
+- **ORM Katmanı:** Prisma ORM
+- **Güvenlik / Auth:** @nestjs/passport, @nestjs/jwt, bcrypt, Throttler
+- **Diğer:** TypeScript, class-validator, class-transformer
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Mimari
+Uygulama, NestJS'in sunduğu güçlü bağımlılık enjeksiyonu (Dependency Injection) yapısı ile modüler olarak tasarlanmıştır:
+- **Modules:** Uygulama özelliklerini bağımsız parçalara ayırır (AuthModule, UsersModule vb.).
+- **Controllers:** HTTP isteklerini (routes) yönetir.
+- **Services:** Çekirdek iş mantığını barındırır.
+- **Guards / Interceptors:** Kimlik doğrulama kontrolleri (JWT Guard vb.) ve istek/yanıt yaşam döngüsüne müdahale için kullanılır.
+- **PrismaService:** Veritabanı ile etkileşimi yönetir.
 
-## Project setup
+## Veritabanı Şeması
+Prisma şeması veritabanı yapısını `schema.prisma` dosyasında tanımlar. Temel olarak aşağıdaki gibidir:
+- **Kullanıcılar (User):** E-posta, şifre hash'leri ve yetki düzeylerini barındırır.
+- **Etkinlikler (Event vb.):** Projede işlenen diğer temel veriler ve bire-çok (1-N) ilişkiler.
 
+## API Uç Noktaları
+Sistemin bazı temel uç noktaları şunlardır (Modüler yapıya göre şekillenir):
+- `POST /auth/register` — Yeni kullanıcı hesabı oluşturur.
+- `POST /auth/login` — Kullanıcı girişi yapar ve yetkilendirme bazlı JWT döner.
+- `GET /users` — Sisteme kayıtlı kullanıcıları listeler (Sadece Admin yetkisi gerektirir).
+- `GET /events` — Tüm etkinlik verilerini listeler.
+
+## Örnek İstekler
+**Başarılı Bir Giriş (Login) İsteği:**
 ```bash
-$ npm install
+curl -X POST http://localhost:3000/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email": "user@example.com", "password": "securepassword123"}'
+```
+**Başarılı Yanıt:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR..."
+}
 ```
 
-## Compile and run the project
+## Kurulum
+Projeyi yerel geliştirme ortamınızda çalıştırmak için:
 
+1. Depoyu klonlayın:
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone https://github.com/username/eventhub-api.git
+cd eventhub-api
+```
+2. Gerekli bağımlılıkları yükleyin:
+```bash
+npm install
+```
+3. Ortam değişkenlerini ayarlayın (Bkz. Çevresel Değişkenler kısmı).
+4. Prisma ile veritabanı tablolarını oluşturun ve şemaları senkronize edin:
+```bash
+npx prisma generate
+npx prisma db push
+```
+*(Alternatif olarak `npx prisma migrate dev` komutu da kullanılabilir).*
+5. Geliştirme sunucusunu başlatın:
+```bash
+npm run start:dev
 ```
 
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+## Çevresel Değişkenler
+Projenin kök dizininde (Mümkünse `.env.example` referansıyla) bir `.env` dosyası oluşturun ve değerleri kendi yerel geliştirme kurulumunuza göre doldurun:
+```env
+PORT=<SUNUCU_PORTU>
+DATABASE_URL=<VERITABANI_BAGLANTI_URL_ADRESI>
+JWT_SECRET=<JWT_GIZLI_ANAHTARI>
+JWT_EXPIRES_IN=<GECERLILIK_SURESI_ORN_1d>
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+## Test
+Sistemin farklı birimlerinin beklendiği gibi çalışıp çalışmadığını test etmek için (NestJS üzerinden Jest altyapısı ile):
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run test         # Unit testler
+npm run test:e2e     # E2E testleri
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Öğrenimler
+Bu projeyi geliştirirken edinilen temel kazanımlar:
+- **NestJS Mimarisini Kavrama:** Bağımlılık Enjeksiyonu, Modüler mimari, Decorators (Guard, Interceptor) yapılarının etkili kullanımı.
+- **Tip Güvenliği ve Prisma ORM:** Prisma ORM kullanarak TypeScript ile end-to-end type safety sağlanması ve karmaşık sorguların yapılandırılması.
+- **Güvenlik Standartları:** Passport entegrasyonuyla JWT yönetimi, rate limiting, şifre korunumu (bcrypt) gibi ileri düzey güvenlik pratikleri.
+- **Kapsamlı Test Stratejisi:** Jest ve Supertest araçlarıyla uygulamayı izole ve uçtan uca (E2E) test etme prensipleri.
